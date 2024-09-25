@@ -19,7 +19,7 @@ except AttributeError:
         'joint_pain', 'cough', 'fatigue', 'diarrhoea', 'sore_throat', 'shortness_of_breath'
     ]
 
-# Define the report generation function using GPT
+# Define the report generation function using ChatCompletion API
 def generate_disease_report(disease_name):
     prompt = f"""
     Provide a detailed report for the disease {disease_name}. 
@@ -30,12 +30,18 @@ def generate_disease_report(disease_name):
     4. Suggested lifestyle changes.
     5. When to consult a doctor.
     """
-    response = openai.Completion.create(
-        engine="text-davinci-003",
-        prompt=prompt,
-        max_tokens=300
+    
+    # Use ChatCompletion instead of Completion
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",  # Use GPT-3.5 or GPT-4 as needed
+        messages=[
+            {"role": "system", "content": "You are a helpful medical assistant."},
+            {"role": "user", "content": prompt}
+        ]
     )
-    report = response.choices[0].text.strip()
+
+    # Get the generated response
+    report = response['choices'][0]['message']['content'].strip()
     return report
 
 # Define prognosis mapping (replace with actual mappings)
@@ -80,4 +86,5 @@ if st.button('Predict Disease'):
     except Exception as e:
         # Display any error during prediction
         st.write(f"Error during prediction: {e}")
+
 
