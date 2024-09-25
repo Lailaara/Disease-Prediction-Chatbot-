@@ -4,15 +4,25 @@ import pandas as pd
 import joblib
 
 # Set your OpenAI API key
-openai.api_key = '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'
+openai.api_key = 'your-api-key-here'
 
 # Load the trained model
 model = joblib.load('disease_prediction_model.pkl')
 
+# Get feature names used during model training
+try:
+    feature_names = model.feature_names_in_  # Try to get feature names from the model
+except AttributeError:
+    # Manually define or handle missing feature names (based on how the model was trained)
+    feature_names = [
+        'itching', 'skin_rash', 'abdominal_pain', 'nausea', 'vomiting', 'headache', 'fever',  # Add all training features here
+        'joint_pain', 'cough', 'fatigue', 'diarrhoea', 'sore_throat', 'shortness_of_breath'
+    ]
+
 # Define the report generation function using GPT
 def generate_disease_report(disease_name):
     prompt = f"""
-    Provide a detailed report for the disease {disease_name}.
+    Provide a detailed report for the disease {disease_name}. 
     Include:
     1. A brief explanation of the disease.
     2. Common symptoms.
@@ -20,55 +30,54 @@ def generate_disease_report(disease_name):
     4. Suggested lifestyle changes.
     5. When to consult a doctor.
     """
-
-    # Call OpenAI API to generate a response
     response = openai.Completion.create(
-        engine="text-davinci-003",  # GPT model
+        engine="text-davinci-003",
         prompt=prompt,
-        max_tokens=300  # Adjust token limit as needed
+        max_tokens=300
     )
-
-    # Extract the text part of the response
     report = response.choices[0].text.strip()
     return report
 
-# Define prognosis mapping
+# Define prognosis mapping (replace with actual mappings)
 prognosis_mapping = {
     0: 'Fungal infection', 1: 'Allergy', 2: 'GERD', 3: 'Chronic cholestasis',
-    4: 'Drug Reaction', 5: 'Peptic ulcer disease', 6: 'AIDS', 7: 'Diabetes',
     # Add other mappings...
 }
 
 # Streamlit UI
-st.title("Disease Prediction App")
+st.title("Symptom Checker Chatbot")
 
 # Symptom selection
-correct_feature_names = ['itching', 'skin_rash', 'vomiting', 'headache']  # Example features
-selected_symptoms = st.multiselect('Select symptoms you are experiencing:', correct_feature_names)
+selected_symptoms = st.multiselect('Select symptoms you are experiencing:', feature_names)
 
 # Prediction
 if st.button('Predict Disease'):
-    input_features = [1 if symptom in selected_symptoms else 0 for symptom in correct_feature_names]
-    input_df = pd.DataFrame([input_features], columns=correct_feature_names)
+    # Ensure the input_df has the same columns (features) as used during training
+    input_features = {symptom: 1 if symptom in selected_symptoms else 0 for symptom in feature_names}
+    
+    # Create DataFrame from input features
+    input_df = pd.DataFrame([input_features], columns=feature_names)
+
+    # Debug: Check if the input DataFrame is correct
+    st.write("Input DataFrame for Prediction:", input_df)
 
     # Predict the disease
-    prediction = model.predict(input_df)
-    predicted_prognosis = prognosis_mapping.get(prediction[0], "Unknown Prognosis")
+    try:
+        prediction = model.predict(input_df)
+        predicted_prognosis = prognosis_mapping.get(prediction[0], "Unknown Prognosis")
 
-    # Display the predicted disease
-    st.write(f'Predicted Disease: **{predicted_prognosis}**')
+        # Debug: Check the prediction result
+        st.write("Raw Prediction Result:", prediction)
+        st.write(f'Predicted Disease: **{predicted_prognosis}**')
 
-    # Generate and display the detailed disease report using GPT
-    if predicted_prognosis != "Unknown Prognosis":
-        report = generate_disease_report(predicted_prognosis)
-        st.write(f'Detailed Report:\n{report}')
+        # Generate and display the detailed disease report using GPT
+        if predicted_prognosis != "Unknown Prognosis":
+            report = generate_disease_report(predicted_prognosis)
+            st.write(f'Detailed Report:\n{report}')
+        else:
+            st.write("The disease prediction is unknown, please consult a healthcare provider.")
 
-        # Create a downloadable link for the report
-        st.download_button(
-            label="Download Report as Text",
-            data=report,
-            file_name=f"{predicted_prognosis}_report.txt",
-            mime="text/plain"
-        )
-    else:
-        st.write("The disease prediction is unknown, please consult a healthcare provider.")
+    except Exception as e:
+        # Display any error during prediction
+        st.write(f"Error during prediction: {e}")
+
