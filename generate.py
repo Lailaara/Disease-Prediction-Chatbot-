@@ -4,7 +4,7 @@ import pandas as pd
 import joblib
 
 # Set your OpenAI API key
-openai.api_key = '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'
+openai.api_key = 'asst_hK1PKll1Y2NqovYCWZmz2vgR'
 
 # Load the trained model
 model = joblib.load('disease_prediction_model.pkl')
